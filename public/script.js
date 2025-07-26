@@ -660,7 +660,8 @@ socket.on('initial-bookings', (initialBookings) => {
 
 socket.on('new-booking', (booking) => {
     console.log('🎉 New booking received:', booking);
-    console.log('⚡ Real-time update: New booking pushed from server');
+    console.log('⚡ Real-time: New booking via Socket.IO "new-booking" event');
+    console.log('📋 Booking object:', { venueName: booking.venueName, partySize: booking.partySize, time: booking.time });
     
     // Add to local state
     bookings.unshift(booking);
@@ -714,7 +715,7 @@ socket.on('new-booking', (booking) => {
         filteredBookings.unshift(booking);
     }
     
-    // Create and add new booking div/list item at the top as per requirements
+    // Dynamically create and append new <div> at the top as per requirements
     addBookingToList(booking, true);
     
     // Update statistics

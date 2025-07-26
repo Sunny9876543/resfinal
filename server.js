@@ -144,18 +144,19 @@ function generateMockBooking() {
   
   const time = generateBookingTime();
   
-  // Core booking object as specified in requirements
+  // EXACT booking object structure as specified in requirements document
   const booking = {
     venueName: venue,
-    partySize: partySize.toString(), // Convert to string as per requirements
-    time: time,
-    // Additional fields for enhanced functionality
-    id: bookingIdCounter++,
-    partyType: eventType,
-    customerName: customerName,
-    timestamp: new Date().toISOString(),
-    status: 'pending'
+    partySize: partySize.toString(),
+    time: time
   };
+  
+  // Additional fields for enhanced dashboard functionality (not in core requirements)
+  booking.id = bookingIdCounter++;
+  booking.partyType = eventType;
+  booking.customerName = customerName;
+  booking.timestamp = new Date().toISOString();
+  booking.status = 'pending';
   
   // Add to beginning of array (newest first)
   bookings.unshift(booking);
