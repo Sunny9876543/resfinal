@@ -334,7 +334,7 @@ setInterval(() => {
   performanceStats.totalBookingsGenerated++;
   performanceStats.lastBookingTime = new Date().toISOString();
   
-  // Broadcast to all connected clients for real-time updates
+  // Broadcast to all connected clients via Socket.IO as per requirements
   io.emit('new-booking', newBooking);
   
   // Broadcast updated statistics to all clients
