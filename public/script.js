@@ -173,8 +173,61 @@ function addBookingToList(booking, isNew = false) {
     const bookingCard = createBookingCard(booking);
     
     if (isNew) {
-        // Add new booking at the top with animation
-        bookingsList.insertBefore(bookingCard, bookingsList.firstChild);
+        // Check if the new booking matches current filters before adding
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+        const statusFilter = document.getElementById('statusFilter').value;
+        const partySizeFilter = document.getElementById('partySizeFilter').value;
+        
+        let shouldShow = true;
+        
+        // Apply search filter
+        if (searchTerm) {
+            const searchableText = `
+                ${booking.venueName} 
+                ${booking.partyType} 
+                ${booking.customerName} 
+                ${booking.id}
+            `.toLowerCase();
+            
+            if (!searchableText.includes(searchTerm)) {
+                shouldShow = false;
+            }
+        }
+        
+        // Apply status filter
+        if (statusFilter !== 'all' && booking.status !== statusFilter) {
+            shouldShow = false;
+        }
+        
+        // Apply party size filter
+        if (partySizeFilter !== 'all') {
+            const size = parseInt(booking.partySize);
+            switch (partySizeFilter) {
+                case 'small':
+                    if (size < 2 || size > 10) shouldShow = false;
+                    break;
+                case 'medium':
+                    if (size < 11 || size > 25) shouldShow = false;
+                    break;
+                case 'large':
+                    if (size < 26 || size > 50) shouldShow = false;
+                    break;
+                case 'xlarge':
+                    if (size <= 50) shouldShow = false;
+                    break;
+            }
+        }
+        
+        if (shouldShow) {
+            // Add new booking at the top with animation
+            bookingsList.insertBefore(bookingCard, bookingsList.firstChild);
+            
+            // Hide empty state
+            emptyState.style.display = 'none';
+        } else {
+            // Don't add to DOM but still update filteredBookings array
+            return;
+        }
         
         // Remove 'new' class after animation
         setTimeout(() => {
@@ -190,10 +243,9 @@ function addBookingToList(booking, isNew = false) {
         }, 100);
     } else {
         bookingsList.appendChild(bookingCard);
+        // Hide empty state when adding bookings
+        emptyState.style.display = 'none';
     }
-    
-    // Hide empty state
-    emptyState.style.display = 'none';
 }
 
 function displayInitialBookings(initialBookings) {
@@ -223,7 +275,7 @@ function updateBookingCard(updatedBooking) {
         
         // Update status
         statusElement.textContent = updatedBooking.status;
-        statusElement.className = `booking-status ${updatedBooking.status === 'confirmed' ? 'confirmed' : ''}`;
+        statusElement.className = `booking-status ${updatedBooking.status}`;
         
         // Update actions if confirmed
         if (updatedBooking.status === 'confirmed') {
@@ -247,6 +299,74 @@ function updateBookingCard(updatedBooking) {
         const bookingIndex = bookings.findIndex(b => b.id === updatedBooking.id);
         if (bookingIndex !== -1) {
             bookings[bookingIndex] = updatedBooking;
+        }
+        
+        // Update filtered bookings
+        const filteredIndex = filteredBookings.findIndex(b => b.id === updatedBooking.id);
+        if (filteredIndex !== -1) {
+            filteredBookings[filteredIndex] = updatedBooking;
+        }
+        
+        // Check if the updated booking still matches current filters
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+        const statusFilter = document.getElementById('statusFilter').value;
+        const partySizeFilter = document.getElementById('partySizeFilter').value;
+        
+        let shouldShow = true;
+        
+        // Apply status filter
+        if (statusFilter !== 'all' && updatedBooking.status !== statusFilter) {
+            shouldShow = false;
+        }
+        
+        // Apply search filter
+        if (searchTerm) {
+            const searchableText = `
+                ${updatedBooking.venueName} 
+                ${updatedBooking.partyType} 
+                ${updatedBooking.customerName} 
+                ${updatedBooking.id}
+            `.toLowerCase();
+            
+            if (!searchableText.includes(searchTerm)) {
+                shouldShow = false;
+            }
+        }
+        
+        // Apply party size filter
+        if (partySizeFilter !== 'all') {
+            const size = parseInt(updatedBooking.partySize);
+            switch (partySizeFilter) {
+                case 'small':
+                    if (size < 2 || size > 10) shouldShow = false;
+                    break;
+                case 'medium':
+                    if (size < 11 || size > 25) shouldShow = false;
+                    break;
+                case 'large':
+                    if (size < 26 || size > 50) shouldShow = false;
+                    break;
+                case 'xlarge':
+                    if (size <= 50) shouldShow = false;
+                    break;
+            }
+        }
+        
+        // Hide the booking card if it no longer matches filters
+        if (!shouldShow) {
+            bookingCard.style.display = 'none';
+            // Remove from filtered bookings
+            const filteredIndex = filteredBookings.findIndex(b => b.id === updatedBooking.id);
+            if (filteredIndex !== -1) {
+                filteredBookings.splice(filteredIndex, 1);
+            }
+            
+            // Show empty state if no bookings are visible
+            if (filteredBookings.length === 0) {
+                emptyState.style.display = 'flex';
+            }
+        } else {
+            bookingCard.style.display = 'block';
         }
         
         updateStatistics();
@@ -291,10 +411,10 @@ function applyFilters() {
         
         // Party size filter
         if (partySizeFilter !== 'all') {
-            const size = booking.partySize;
+            const size = parseInt(booking.partySize);
             switch (partySizeFilter) {
                 case 'small':
-                    if (size > 10) return false;
+                    if (size < 2 || size > 10) return false;
                     break;
                 case 'medium':
                     if (size < 11 || size > 25) return false;
@@ -316,12 +436,19 @@ function applyFilters() {
     
     if (filteredBookings.length === 0) {
         emptyState.style.display = 'flex';
-        if (searchTerm) {
-            emptyState.querySelector('h3').textContent = 'No bookings found';
-            emptyState.querySelector('p').textContent = `No results for "${searchTerm}". Try a different search term.`;
+        const emptyTitle = emptyState.querySelector('h3');
+        const emptyText = emptyState.querySelector('p');
+        
+        if (searchTerm || statusFilter !== 'all' || partySizeFilter !== 'all') {
+            emptyTitle.textContent = 'No bookings found';
+            if (searchTerm) {
+                emptyText.textContent = `No results for "${searchTerm}". Try a different search term or adjust filters.`;
+            } else {
+                emptyText.textContent = 'No bookings match your current filters. Try adjusting your criteria.';
+            }
         } else {
-            emptyState.querySelector('h3').textContent = 'No bookings match your filters';
-            emptyState.querySelector('p').textContent = 'Try adjusting your filter criteria';
+            emptyTitle.textContent = 'Waiting for bookings...';
+            emptyText.textContent = 'New bookings will appear here in real-time';
         }
     } else {
         emptyState.style.display = 'none';
@@ -537,6 +664,55 @@ socket.on('new-booking', (booking) => {
     
     // Add to local state
     bookings.unshift(booking);
+    
+    // Update filtered bookings array
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const partySizeFilter = document.getElementById('partySizeFilter').value;
+    
+    let shouldAddToFiltered = true;
+    
+    // Apply search filter
+    if (searchTerm) {
+        const searchableText = `
+            ${booking.venueName} 
+            ${booking.partyType} 
+            ${booking.customerName} 
+            ${booking.id}
+        `.toLowerCase();
+        
+        if (!searchableText.includes(searchTerm)) {
+            shouldAddToFiltered = false;
+        }
+    }
+    
+    // Apply status filter
+    if (statusFilter !== 'all' && booking.status !== statusFilter) {
+        shouldAddToFiltered = false;
+    }
+    
+    // Apply party size filter
+    if (partySizeFilter !== 'all') {
+        const size = parseInt(booking.partySize);
+        switch (partySizeFilter) {
+            case 'small':
+                if (size < 2 || size > 10) shouldAddToFiltered = false;
+                break;
+            case 'medium':
+                if (size < 11 || size > 25) shouldAddToFiltered = false;
+                break;
+            case 'large':
+                if (size < 26 || size > 50) shouldAddToFiltered = false;
+                break;
+            case 'xlarge':
+                if (size <= 50) shouldAddToFiltered = false;
+                break;
+        }
+    }
+    
+    if (shouldAddToFiltered) {
+        filteredBookings.unshift(booking);
+    }
     
     // Create and add new booking div/list item at the top as per requirements
     addBookingToList(booking, true);
